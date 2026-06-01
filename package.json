@@ -8,6 +8,7 @@
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
+    "test": "vitest run",
     "check": "tsc --noEmit",
     "build": "tsc"
   },
@@ -16,6 +17,7 @@
     "@cloudflare/workers-types": "^4.20260601.1",
     "lefthook": "^2.1.9",
     "typescript": "^5.7.2",
+    "vitest": "^4.1.8",
     "wrangler": "^4.96.0"
   },
   "engines": {

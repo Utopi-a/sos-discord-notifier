@@ -196,6 +196,7 @@ pnpm dev           # wrangler dev
 pnpm deploy:worker # Cloudflare Workersへデプロイ
 pnpm lint          # Biome lint / format チェック
 pnpm lint:fix      # Biome lint / format 自動修正
+pnpm test          # Vitest
 pnpm check         # TypeScript型チェック
 pnpm build         # distへビルド
 ```
@@ -208,4 +209,4 @@ pnpm build         # distへビルド
 lefthook install
 ```
 
-pre-commitでは `pnpm lint:fix` と `pnpm check` を実行します。
+pre-commitでは `pnpm lint:fix`、`pnpm check`、`pnpm test` を実行します。
