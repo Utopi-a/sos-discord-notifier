@@ -131,7 +131,7 @@ Cloudflare WorkersのGit integrationを使うと、GitHubへpushするだけで�
 
 ```text
 Repository: Utopi-a/sos-discord-notifier
-Branch: master
+Branch: main
 Root directory: /
 Build command: pnpm install --frozen-lockfile
 Deploy command: pnpm deploy:worker
