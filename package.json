@@ -1,0 +1,25 @@
+{
+  "name": "sos-discord-notifier",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "deploy:worker": "wrangler deploy",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "check": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
+    "@cloudflare/workers-types": "^4.20260601.1",
+    "lefthook": "^2.1.9",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.96.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.6.3"
+}

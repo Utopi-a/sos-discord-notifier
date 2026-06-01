@@ -1,0 +1,27 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "sos-discord-notifier",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-06-01",
+  "workers_dev": true,
+  "preview_urls": false,
+  "observability": {
+    "enabled": true
+  },
+  "triggers": {
+    "crons": ["*/15 * * * *"]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "NOTICE_STATE",
+      "id": "cdda8a2b2f9e4102828079e68d3048b6",
+      "remote": true
+    }
+  ],
+  "vars": {
+    "FIREBASE_API_KEY": "AIzaSyCpf-MZY12Q1CvjMOSait5z_FD3jFMXV1U",
+    "NOTICE_STATE_KEY": "seen-notice-ids",
+    "SOS_API_BASE_URL": "https://sos26-api.sohosai.com",
+    "SOS_PROJECT_ID": "cmovi12qf0mmnq801h9uj43yg"
+  }
+}
