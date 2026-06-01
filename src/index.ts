@@ -254,7 +254,6 @@ async function postToDiscord(webhookUrl: string, notice: NoticeDetail): Promise<
             4096,
           ),
           color: notice.isRead ? 0x64748b : 0xef4444,
-          footer: { text: notice.isRead ? "チェック済み" : "未チェック" },
         },
       ],
     }),
