@@ -254,6 +254,11 @@ async function checkOnce(env: Env): Promise<CheckResult> {
 }
 
 export default {
+  async fetch(_request: Request, env: Env): Promise<Response> {
+    const result = await checkOnce(env);
+    return Response.json(result);
+  },
+
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(
       checkOnce(env).then((result) => {

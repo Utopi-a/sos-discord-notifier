@@ -98,6 +98,16 @@ pnpm deploy:worker
 
 `wrangler.jsonc` の `triggers.crons` は `*/15 * * * *` なので、15分ごとに実行されます。Cloudflare Cron TriggersはUTC基準です。
 
+## Manual Trigger
+
+Worker URLへアクセスすると、Cronと同じ `checkOnce` を1回実行します。
+
+```bash
+curl "https://<worker-name>.<workers-dev-subdomain>.workers.dev/"
+```
+
+このHTTP endpointはアプリ側ではトークン認証しません。公開制限が必要な場合は、Cloudflare Dashboard側でAccess、WAF、Custom Domainのルールなどを使って制限してください。
+
 ## Continuous Deployment
 
 Cloudflare WorkersのGit integrationを使うと、GitHubへpushするだけで自動デプロイできます。
@@ -143,8 +153,6 @@ pnpm deploy:worker
 
 ### TLS handshake failure on workers.dev
 
-このWorkerはCron専用なので、`wrangler.jsonc` では `workers_dev: false` にしています。本番URLへアクセスして動作確認する前提ではありません。
-
 `curl: (35) ... sslv3 alert handshake failure` は、WorkerコードやSecret権限のエラーではありません。TLS接続がWorkerに届く前に失敗しています。
 
 よくある原因:
@@ -152,17 +160,17 @@ pnpm deploy:worker
 - workers.devサブドメイン作成直後でDNS/証明書がまだ反映中
 - `pnpm deploy:worker` が表示したURLと違うURLを叩いている
 - Cloudflare Dashboard側でworkers.dev routeが無効
-- Cloudflare側で該当Workerのworkers.dev routeを無効にしている
+- Cloudflare側で該当Workerのworkers.dev route、Access、WAFなどの公開制限が効いている
 
 確認する場所:
 
 1. Cloudflare Dashboard > Workers & Pages > 対象Workerを開きます。
 2. Settings > Domains & Routesを開きます。
-3. `*.workers.dev` のrouteを使うならEnabled、Cron専用ならDisabledでも問題ありません。
+3. `*.workers.dev` のrouteがEnabledになっていることを確認します。
 4. Settings > Builds/Deploymentsで最新Versionが成功していることを確認します。
 5. Account Home > Workers & Pages > workers.dev subdomainで、workers.devサブドメインがActiveになっていることを確認します。
 
-それでも失敗する場合は、`pnpm deploy:worker` が表示したURLをそのまま使っているか確認してください。`https://<worker-name>.<workers-dev-subdomain>.workers.dev/` の形になります。
+サブドメイン作成直後は、Cloudflare側の証明書発行や反映に時間がかかることがあります。設定が正しそうなら、しばらく待ってから `pnpm deploy:worker` が表示したURLをそのまま確認してください。URLは `https://<worker-name>.<workers-dev-subdomain>.workers.dev/` の形になります。
 
 切り分けコマンド:
 
@@ -171,7 +179,7 @@ dig +short <worker-name>.<workers-dev-subdomain>.workers.dev
 curl -v "https://<worker-name>.<workers-dev-subdomain>.workers.dev/"
 ```
 
-DNSが引けてTLSだけ失敗する場合は、Cloudflare側のworkers.dev route/証明書反映の問題です。Cron専用運用ならworkers.dev公開URLは不要なので、`workers_dev: false` のままで問題ありません。
+DNSが引けてTLSだけ失敗する場合は、Cloudflare側のworkers.dev routeまたは証明書反映の問題です。
 
 ### First run does not post old notices
 
@@ -179,7 +187,7 @@ DNSが引けてTLSだけ失敗する場合は、Cloudflare側のworkers.dev rout
 
 ### Send one existing notice as a test
 
-Cloudflare DashboardのKVで `seen-notice-ids` のJSONから1件だけIDを削除し、Worker URLを手動実行してください。その1件だけ新規扱いで投稿されます。
+Cloudflare DashboardのKVで `seen-notice-ids` のJSONから1件だけIDを削除し、Worker URLへアクセスしてください。その1件だけ新規扱いで投稿されます。
 
 ## Commands
 
