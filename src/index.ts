@@ -9,7 +9,6 @@ export type Env = {
   DISCORD_WEBHOOK_URL: string;
   NOTICE_STATE: KVNamespace;
   FIREBASE_API_KEY?: string;
-  MANUAL_TRIGGER_TOKEN?: string;
   NOTICE_STATE_KEY?: string;
   SOS_API_BASE_URL?: string;
 };
@@ -77,19 +76,6 @@ function getConfig(env: Env): Config {
     sosApiBaseUrl: env.SOS_API_BASE_URL || DEFAULT_SOS_API_BASE_URL,
     stateKey: env.NOTICE_STATE_KEY || DEFAULT_STATE_KEY,
   };
-}
-
-function isAuthorized(request: Request, env: Env): boolean {
-  if (!env.MANUAL_TRIGGER_TOKEN) {
-    return true;
-  }
-
-  const url = new URL(request.url);
-  const authorization = request.headers.get("authorization");
-  return (
-    url.searchParams.get("token") === env.MANUAL_TRIGGER_TOKEN ||
-    authorization === `Bearer ${env.MANUAL_TRIGGER_TOKEN}`
-  );
 }
 
 async function readState(kv: KVNamespace, stateKey: string): Promise<State | null> {
@@ -268,15 +254,6 @@ async function checkOnce(env: Env): Promise<CheckResult> {
 }
 
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    if (!isAuthorized(request, env)) {
-      return new Response("Unauthorized", { status: 401 });
-    }
-
-    const result = await checkOnce(env);
-    return Response.json(result);
-  },
-
   async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     ctx.waitUntil(
       checkOnce(env).then((result) => {

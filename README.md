@@ -22,7 +22,6 @@ SOSのお知らせAPIをCloudflare Workers Cronでポーリングし、新しい
 | `SOS_PASSWORD` | Secret / `.dev.vars` | Yes | SOSログインに使うパスワード |
 | `SOS_PROJECT_ID` | `wrangler.jsonc` vars / `.dev.vars` | Yes | ブラウザDevToolsのNetworkで `/project/<projectId>/notices` のURLから取得 |
 | `DISCORD_WEBHOOK_URL` | Secret / `.dev.vars` | Yes | Discordチャンネル設定 > 連携サービス > ウェブフック |
-| `MANUAL_TRIGGER_TOKEN` | Secret / `.dev.vars` | No | 手動実行URLを保護したい場合に任意の長い文字列を設定 |
 
 基本的に変えなくてよい値:
 
@@ -53,25 +52,12 @@ SOS_EMAIL=
 SOS_PASSWORD=
 SOS_PROJECT_ID=
 DISCORD_WEBHOOK_URL=
-MANUAL_TRIGGER_TOKEN=
 ```
 
 ローカル実行:
 
 ```bash
 pnpm dev
-```
-
-別ターミナルで手動実行:
-
-```bash
-curl "http://localhost:8787/"
-```
-
-`MANUAL_TRIGGER_TOKEN` を設定している場合:
-
-```bash
-curl "http://localhost:8787/?token=<MANUAL_TRIGGER_TOKEN>"
 ```
 
 Cron相当のローカル実行:
@@ -102,12 +88,6 @@ pnpm wrangler kv namespace create NOTICE_STATE
 pnpm wrangler secret put SOS_EMAIL
 pnpm wrangler secret put SOS_PASSWORD
 pnpm wrangler secret put DISCORD_WEBHOOK_URL
-```
-
-手動実行URLを保護したい場合だけ、これも登録します。
-
-```bash
-pnpm wrangler secret put MANUAL_TRIGGER_TOKEN
 ```
 
 デプロイします。
@@ -151,7 +131,6 @@ KV bindingやCron triggerは `wrangler.jsonc` で管理します。SecretsはGit
 pnpm wrangler secret put SOS_EMAIL
 pnpm wrangler secret put SOS_PASSWORD
 pnpm wrangler secret put DISCORD_WEBHOOK_URL
-pnpm wrangler secret put MANUAL_TRIGGER_TOKEN
 ```
 
 Git integrationでは、push後にCloudflare DashboardのDeployments/Buildsでログを確認できます。Wranglerで直接デプロイする場合は、これまで通り以下を使えます。
@@ -160,30 +139,11 @@ Git integrationでは、push後にCloudflare DashboardのDeployments/Buildsで�
 pnpm deploy:worker
 ```
 
-## Manual Trigger
-
-本番URLにアクセスすると、Cronと同じチェック処理を手動実行できます。
-
-```bash
-curl "https://<worker-name>.<workers-dev-subdomain>.workers.dev/"
-```
-
-`MANUAL_TRIGGER_TOKEN` を設定している場合:
-
-```bash
-curl "https://<worker-name>.<workers-dev-subdomain>.workers.dev/?token=<MANUAL_TRIGGER_TOKEN>"
-```
-
-または:
-
-```bash
-curl -H "Authorization: Bearer <MANUAL_TRIGGER_TOKEN>" \
-  "https://<worker-name>.<workers-dev-subdomain>.workers.dev/"
-```
-
 ## Troubleshooting
 
 ### TLS handshake failure on workers.dev
+
+このWorkerはCron専用なので、`wrangler.jsonc` では `workers_dev: false` にしています。本番URLへアクセスして動作確認する前提ではありません。
 
 `curl: (35) ... sslv3 alert handshake failure` は、WorkerコードやSecret権限のエラーではありません。TLS接続がWorkerに届く前に失敗しています。
 
@@ -192,12 +152,13 @@ curl -H "Authorization: Bearer <MANUAL_TRIGGER_TOKEN>" \
 - workers.devサブドメイン作成直後でDNS/証明書がまだ反映中
 - `pnpm deploy:worker` が表示したURLと違うURLを叩いている
 - Cloudflare Dashboard側でworkers.dev routeが無効
+- Cloudflare側で該当Workerのworkers.dev routeを無効にしている
 
 確認する場所:
 
 1. Cloudflare Dashboard > Workers & Pages > 対象Workerを開きます。
 2. Settings > Domains & Routesを開きます。
-3. `*.workers.dev` のrouteがEnabledになっていることを確認します。
+3. `*.workers.dev` のrouteを使うならEnabled、Cron専用ならDisabledでも問題ありません。
 4. Settings > Builds/Deploymentsで最新Versionが成功していることを確認します。
 5. Account Home > Workers & Pages > workers.dev subdomainで、workers.devサブドメインがActiveになっていることを確認します。
 
@@ -210,7 +171,7 @@ dig +short <worker-name>.<workers-dev-subdomain>.workers.dev
 curl -v "https://<worker-name>.<workers-dev-subdomain>.workers.dev/"
 ```
 
-DNSが引けてTLSだけ失敗する場合は、Cloudflare側のworkers.dev route/証明書反映の問題です。数分待つか、Dashboardでworkers.dev routeを一度無効化/有効化して再デプロイしてください。
+DNSが引けてTLSだけ失敗する場合は、Cloudflare側のworkers.dev route/証明書反映の問題です。Cron専用運用ならworkers.dev公開URLは不要なので、`workers_dev: false` のままで問題ありません。
 
 ### First run does not post old notices
 
