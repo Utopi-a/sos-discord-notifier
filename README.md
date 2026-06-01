@@ -118,6 +118,48 @@ pnpm deploy:worker
 
 `wrangler.jsonc` の `triggers.crons` は `*/15 * * * *` なので、15分ごとに実行されます。Cloudflare Cron TriggersはUTC基準です。
 
+## Continuous Deployment
+
+Cloudflare WorkersのGit integrationを使うと、GitHubへpushするだけで自動デプロイできます。
+
+1. Cloudflare Dashboardを開きます。
+2. Workers & Pages > Workers へ移動します。
+3. 対象Worker `sos-discord-notifier` を開きます。
+4. Deployments / Builds / Settings 付近からGit repositoryを接続します。
+5. GitHub Appに `Utopi-a/sos-discord-notifier` へのアクセスを許可します。
+6. Build settingsを以下にします。
+
+```text
+Repository: Utopi-a/sos-discord-notifier
+Branch: master
+Root directory: /
+Build command: pnpm install --frozen-lockfile
+Deploy command: pnpm deploy:worker
+```
+
+Cloudflare側のWorker名と `wrangler.jsonc` の `name` は一致させてください。
+
+```jsonc
+{
+  "name": "sos-discord-notifier"
+}
+```
+
+KV bindingやCron triggerは `wrangler.jsonc` で管理します。SecretsはGitHubに置かず、Cloudflare WorkerのSecretsに置きます。
+
+```bash
+pnpm wrangler secret put SOS_EMAIL
+pnpm wrangler secret put SOS_PASSWORD
+pnpm wrangler secret put DISCORD_WEBHOOK_URL
+pnpm wrangler secret put MANUAL_TRIGGER_TOKEN
+```
+
+Git integrationでは、push後にCloudflare DashboardのDeployments/Buildsでログを確認できます。Wranglerで直接デプロイする場合は、これまで通り以下を使えます。
+
+```bash
+pnpm deploy:worker
+```
+
 ## Manual Trigger
 
 本番URLにアクセスすると、Cronと同じチェック処理を手動実行できます。
@@ -151,7 +193,24 @@ curl -H "Authorization: Bearer <MANUAL_TRIGGER_TOKEN>" \
 - `pnpm deploy:worker` が表示したURLと違うURLを叩いている
 - Cloudflare Dashboard側でworkers.dev routeが無効
 
-数分待って、`pnpm deploy:worker` が表示したURLをそのまま叩いてください。
+確認する場所:
+
+1. Cloudflare Dashboard > Workers & Pages > 対象Workerを開きます。
+2. Settings > Domains & Routesを開きます。
+3. `*.workers.dev` のrouteがEnabledになっていることを確認します。
+4. Settings > Builds/Deploymentsで最新Versionが成功していることを確認します。
+5. Account Home > Workers & Pages > workers.dev subdomainで、workers.devサブドメインがActiveになっていることを確認します。
+
+それでも失敗する場合は、`pnpm deploy:worker` が表示したURLをそのまま使っているか確認してください。`https://<worker-name>.<workers-dev-subdomain>.workers.dev/` の形になります。
+
+切り分けコマンド:
+
+```bash
+dig +short <worker-name>.<workers-dev-subdomain>.workers.dev
+curl -v "https://<worker-name>.<workers-dev-subdomain>.workers.dev/"
+```
+
+DNSが引けてTLSだけ失敗する場合は、Cloudflare側のworkers.dev route/証明書反映の問題です。数分待つか、Dashboardでworkers.dev routeを一度無効化/有効化して再デプロイしてください。
 
 ### First run does not post old notices
 
