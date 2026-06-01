@@ -152,10 +152,66 @@ function htmlToDiscordText(html: string | null): string {
     return "";
   }
 
-  return html
+  const placeholders: string[] = [];
+  const protect = (value: string) => {
+    const index = placeholders.push(value) - 1;
+    return `%%SOS_NOTICE_MARKDOWN_${index}%%`;
+  };
+
+  const restorePlaceholders = (value: string) =>
+    value.replace(/%%SOS_NOTICE_MARKDOWN_(\d+)%%/g, (_, index: string) => {
+      return placeholders[Number(index)] || "";
+    });
+
+  return restorePlaceholders(
+    html
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<pre\b[^>]*>([\s\S]*?)<\/pre>/gi, (_, content: string) =>
+        protect(`\`\`\`\n${htmlToDiscordText(content)}\n\`\`\``),
+      )
+      .replace(/<code\b[^>]*>([\s\S]*?)<\/code>/gi, (_, content: string) =>
+        protect(`\`${htmlToDiscordText(content).replace(/`/g, "\\`")}\``),
+      )
+      .replace(/<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>/gi, "**$2**")
+      .replace(/<(em|i)\b[^>]*>([\s\S]*?)<\/\1>/gi, "*$2*")
+      .replace(/<(s|strike|del)\b[^>]*>([\s\S]*?)<\/\1>/gi, "~~$2~~")
+      .replace(/<u\b[^>]*>([\s\S]*?)<\/u>/gi, "__$1__")
+      .replace(/<h[1-6]\b[^>]*>([\s\S]*?)<\/h[1-6]>/gi, "\n**$1**\n")
+      .replace(/<a\b[^>]*href=(["'])(.*?)\1[^>]*>([\s\S]*?)<\/a>/gi, (_, _quote, href, text) => {
+        const label = htmlToDiscordText(text);
+        return label ? `[${label}](${decodeHtmlEntities(href)})` : decodeHtmlEntities(href);
+      })
+      .replace(/<blockquote\b[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, content: string) =>
+        htmlToDiscordText(content)
+          .split("\n")
+          .filter(Boolean)
+          .map((line) => `> ${line}`)
+          .join("\n"),
+      )
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<li\b[^>]*>/gi, "\n- ")
+      .replace(/<\/li>/gi, "\n")
+      .replace(/<\/(p|div|section|article|ul|ol)>/gi, "\n")
+      .replace(/<(p|div|section|article|ul|ol)\b[^>]*>/gi, "")
+      .replace(/<[^>]*>/g, ""),
+  )
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'")
+    .replace(/\n[ \t]+/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function decodeHtmlEntities(value: string): string {
+  return value
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(p|div|li|ul|ol|blockquote|h[1-6])>/gi, "\n")
-    .replace(/<a\b[^>]*href="([^"]+)"[^>]*>(.*?)<\/a>/gi, "$2 ($1)")
     .replace(/<[^>]*>/g, "")
     .replace(/&nbsp;/g, " ")
     .replace(/&amp;/g, "&")
@@ -163,8 +219,7 @@ function htmlToDiscordText(html: string | null): string {
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
     .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+    .replace(/&#x27;/gi, "'");
 }
 
 function truncateForDiscord(value: string, maxLength: number): string {

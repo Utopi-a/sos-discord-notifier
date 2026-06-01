@@ -145,7 +145,12 @@ describe("SOS Discord notifier", () => {
     const details = {
       "notice-2": {
         ...notices[2],
-        body: '<p>本文&amp;リンク <a href="https://example.test">詳細</a></p>',
+        body: [
+          "<h2>重要</h2>",
+          '<p><strong>太字</strong>と<em>斜体</em>、<a href="https://example.test">詳細</a></p>',
+          "<blockquote>引用&amp;補足</blockquote>",
+          "<ul><li>持ち物</li><li><code>student-id</code></li></ul>",
+        ].join(""),
         attachments: [
           {
             fileName: "guide.pdf",
@@ -175,9 +180,11 @@ describe("SOS Discord notifier", () => {
       "Older",
       "Newer",
     ]);
-    expect(JSON.parse(discordCalls[0]?.body ?? "{}").embeds[0].description).toContain(
-      "本文&リンク 詳細 (https://example.test)",
-    );
+    const firstDescription = JSON.parse(discordCalls[0]?.body ?? "{}").embeds[0].description;
+    expect(firstDescription).toContain("**重要**");
+    expect(firstDescription).toContain("**太字**と*斜体*、[詳細](https://example.test)");
+    expect(firstDescription).toContain("> 引用&補足");
+    expect(firstDescription).toContain("- `student-id`");
     expect(JSON.parse(discordCalls[0]?.body ?? "{}").embeds[0].description).toContain(
       "添付: guide.pdf",
     );
