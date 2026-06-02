@@ -244,18 +244,12 @@ async function postToDiscord(webhookUrl: string, notice: NoticeDetail): Promise<
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      embeds: [
-        {
-          title: notice.title,
-          description: truncateForDiscord(
-            [`${notice.ownerBureau} / ${deliveredAt}`, body, attachmentText]
-              .filter(Boolean)
-              .join("\n\n"),
-            4096,
-          ),
-          color: notice.isRead ? 0x64748b : 0xef4444,
-        },
-      ],
+      content: truncateForDiscord(
+        [`**${notice.title}**`, `${notice.ownerBureau} / ${deliveredAt}`, body, attachmentText]
+          .filter(Boolean)
+          .join("\n\n"),
+        2000,
+      ),
     }),
   });
 
