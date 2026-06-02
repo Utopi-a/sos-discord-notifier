@@ -176,29 +176,29 @@ describe("SOS Discord notifier", () => {
 
     const discordCalls = calls.filter((call) => call.url === DISCORD_WEBHOOK_URL);
     expect(discordCalls).toHaveLength(2);
-    expect(discordCalls.map((call) => JSON.parse(call.body ?? "{}").content)).toEqual([
-      expect.stringContaining("**Older**"),
-      expect.stringContaining("**Newer**"),
+    expect(discordCalls.map((call) => JSON.parse(call.body ?? "{}").embeds[0].title)).toEqual([
+      "Older",
+      "Newer",
     ]);
-    expect(discordCalls.map((call) => JSON.parse(call.body ?? "{}").embeds)).toEqual([
+    expect(discordCalls.map((call) => JSON.parse(call.body ?? "{}").embeds[0].color)).toEqual([
+      0x2563eb, 0x2563eb,
+    ]);
+    expect(discordCalls.map((call) => JSON.parse(call.body ?? "{}").embeds[0].footer)).toEqual([
       undefined,
       undefined,
     ]);
-    expect(
-      discordCalls.map((call) => JSON.parse(call.body ?? "{}").content.split("\n")[0]),
-    ).toEqual(["**Older**", "**Newer**"]);
-    const firstContent = JSON.parse(discordCalls[0]?.body ?? "{}").content;
-    expect(firstContent).toContain("**重要**");
-    expect(firstContent).toContain("**太字**と*斜体*、[詳細](https://example.test)");
-    expect(firstContent).toContain("> 引用&補足");
-    expect(firstContent).toContain("- `student-id`");
-    expect(firstContent).toContain("添付: guide.pdf");
+    const firstDescription = JSON.parse(discordCalls[0]?.body ?? "{}").embeds[0].description;
+    expect(firstDescription).toContain("**重要**");
+    expect(firstDescription).toContain("**太字**と*斜体*、[詳細](https://example.test)");
+    expect(firstDescription).toContain("> 引用&補足");
+    expect(firstDescription).toContain("- `student-id`");
+    expect(firstDescription).toContain("添付: guide.pdf");
     expect(JSON.parse(kv.store.get(STATE_KEY) ?? "{}")).toEqual({
       seenNoticeIds: ["notice-3", "notice-1", "notice-2"],
     });
   });
 
-  it("limits plain Discord content to the webhook content size", async () => {
+  it("limits Discord embed descriptions to the embed description size", async () => {
     const kv = new MemoryKv();
     kv.store.set(STATE_KEY, JSON.stringify({ seenNoticeIds: [] }));
     const env = makeEnv(kv);
@@ -206,7 +206,7 @@ describe("SOS Discord notifier", () => {
     const details = {
       "notice-1": {
         ...notices[0],
-        body: `<p>${"a".repeat(3000)}</p>`,
+        body: `<p>${"a".repeat(5000)}</p>`,
         attachments: [],
       },
     };
@@ -215,9 +215,9 @@ describe("SOS Discord notifier", () => {
     await worker.fetch(new Request("https://worker.example.test/"), env);
 
     const discordCall = calls.find((call) => call.url === DISCORD_WEBHOOK_URL);
-    const content = JSON.parse(discordCall?.body ?? "{}").content;
-    expect(content).toHaveLength(2000);
-    expect(content.endsWith("…")).toBe(true);
+    const description = JSON.parse(discordCall?.body ?? "{}").embeds[0].description;
+    expect(description).toHaveLength(4096);
+    expect(description.endsWith("…")).toBe(true);
   });
 
   it("runs the same check from the scheduled handler", async () => {
