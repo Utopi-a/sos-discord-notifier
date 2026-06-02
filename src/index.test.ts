@@ -193,6 +193,9 @@ describe("SOS Discord notifier", () => {
     expect(firstDescription).toContain("> 引用&補足");
     expect(firstDescription).toContain("- `student-id`");
     expect(firstDescription).toContain("添付: guide.pdf");
+    expect(firstDescription).toContain(
+      "詳細は[SOSのお知らせページ](https://sos26.sohosai.com/project/notice)を確認してください。",
+    );
     expect(JSON.parse(kv.store.get(STATE_KEY) ?? "{}")).toEqual({
       seenNoticeIds: ["notice-3", "notice-1", "notice-2"],
     });
@@ -217,7 +220,12 @@ describe("SOS Discord notifier", () => {
     const discordCall = calls.find((call) => call.url === DISCORD_WEBHOOK_URL);
     const description = JSON.parse(discordCall?.body ?? "{}").embeds[0].description;
     expect(description).toHaveLength(4096);
-    expect(description.endsWith("…")).toBe(true);
+    expect(description).toContain("…");
+    expect(
+      description.endsWith(
+        "詳細は[SOSのお知らせページ](https://sos26.sohosai.com/project/notice)を確認してください。",
+      ),
+    ).toBe(true);
   });
 
   it("runs the same check from the scheduled handler", async () => {

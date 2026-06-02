@@ -1,6 +1,8 @@
 const DEFAULT_FIREBASE_API_KEY = "AIzaSyCpf-MZY12Q1CvjMOSait5z_FD3jFMXV1U";
+const DEFAULT_NOTICE_PAGE_URL = "https://sos26.sohosai.com/project/notice";
 const DEFAULT_SOS_API_BASE_URL = "https://sos26-api.sohosai.com";
 const DEFAULT_STATE_KEY = "seen-notice-ids";
+const DISCORD_EMBED_DESCRIPTION_MAX_LENGTH = 4096;
 
 export type Env = {
   SOS_EMAIL: string;
@@ -230,6 +232,34 @@ function truncateForDiscord(value: string, maxLength: number): string {
   return `${value.slice(0, maxLength - 1)}…`;
 }
 
+function buildDiscordDescription(
+  notice: NoticeDetail,
+  deliveredAt: string,
+  body: string,
+  attachmentText: string,
+): string {
+  const header = `${notice.ownerBureau} / ${deliveredAt}`;
+  const noticeLink = `詳細は[SOSのお知らせページ](${DEFAULT_NOTICE_PAGE_URL})を確認してください。`;
+  const fullDescription = [header, body, attachmentText, noticeLink].filter(Boolean).join("\n\n");
+
+  if (fullDescription.length <= DISCORD_EMBED_DESCRIPTION_MAX_LENGTH) {
+    return fullDescription;
+  }
+
+  const descriptionWithoutBody = [header, attachmentText, noticeLink].filter(Boolean).join("\n\n");
+  const bodyMaxLength =
+    DISCORD_EMBED_DESCRIPTION_MAX_LENGTH - descriptionWithoutBody.length - "\n\n".length;
+
+  return [
+    header,
+    bodyMaxLength > 0 ? truncateForDiscord(body, bodyMaxLength) : "",
+    attachmentText,
+    noticeLink,
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+}
+
 async function postToDiscord(webhookUrl: string, notice: NoticeDetail): Promise<void> {
   const deliveredAt = new Date(notice.deliveredAt).toLocaleString("ja-JP", {
     timeZone: "Asia/Tokyo",
@@ -237,7 +267,7 @@ async function postToDiscord(webhookUrl: string, notice: NoticeDetail): Promise<
   const body = htmlToDiscordText(notice.body);
   const attachmentText =
     notice.attachments.length > 0
-      ? `\n\n添付: ${notice.attachments.map((attachment) => attachment.fileName).join(", ")}`
+      ? `添付: ${notice.attachments.map((attachment) => attachment.fileName).join(", ")}`
       : "";
 
   const response = await fetch(webhookUrl, {
@@ -247,12 +277,7 @@ async function postToDiscord(webhookUrl: string, notice: NoticeDetail): Promise<
       embeds: [
         {
           title: notice.title,
-          description: truncateForDiscord(
-            [`${notice.ownerBureau} / ${deliveredAt}`, body, attachmentText]
-              .filter(Boolean)
-              .join("\n\n"),
-            4096,
-          ),
+          description: buildDiscordDescription(notice, deliveredAt, body, attachmentText),
           color: 0x2563eb,
         },
       ],
